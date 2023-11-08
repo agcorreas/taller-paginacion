@@ -15,6 +15,7 @@ extern IDT_DESC
 extern idt_init
 extern pic_reset
 extern pic_enable
+extern mmu_init_kernel_dir
 
 
 
@@ -102,13 +103,22 @@ modo_protegido:
 
     ; COMPLETAR - Inicializar pantalla
     
+    
     call screen_draw_layout
 
     call idt_init
     LIDT &IDT_DESC
 
+    call mmu_init_kernel_dir
+    mov CR3, eax
+    mov eax, CR0
+    or eax,0x80000000
+    mov cr0, eax  
     call pic_reset
-    call pic_enable
+    call pic_enable    
+    
+
+    
     sti
 
     xor eax, eax

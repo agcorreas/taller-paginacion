@@ -78,13 +78,13 @@ paddr_t mmu_next_free_user_page(void) {
 paddr_t mmu_init_kernel_dir(void) {
 
   pd_entry_t primeraEntrada;
-  primeraEntrada.pt = KERNEL_PAGE_TABLE_0;
+  primeraEntrada.pt = KERNEL_PAGE_TABLE_0>>12;
   primeraEntrada.attrs = MMU_W | MMU_P;
   kpd[0] = primeraEntrada;
   for (size_t index = 0; index < 1024; index++)
   {
     pt_entry_t entradaMapeoDirecto;
-    entradaMapeoDirecto.page = index * 0x1000;
+    entradaMapeoDirecto.page = index;
     entradaMapeoDirecto.attrs= MMU_W | MMU_P;
     kpt[index] = entradaMapeoDirecto;
   }
@@ -101,6 +101,35 @@ paddr_t mmu_init_kernel_dir(void) {
  * @param attrs los atributos a asignar en la entrada de la tabla de páginas
  */
 void mmu_map_page(uint32_t cr3, vaddr_t virt, paddr_t phy, uint32_t attrs) {
+  
+  //Tomamos la direccion del cr3 como el inicio de un directorio de paginas
+  pd_entry_t* directorio = (pd_entry_t*)(CR3_TO_PAGE_DIR(cr3));
+  
+  //Desmenuzamos a la direccion virtual en cada uno de sus significados individuales
+  uint32_t indexDirectorio = VIRT_PAGE_DIR(virt);
+  uint32_t indexTabla = VIRT_PAGE_TABLE(virt);
+  uint32_t offset = VIRT_PAGE_OFFSET(virt);
+
+  //Chequeamos si existe la entrada del directorio de paginas que busca la direccion virtual
+  pd_entry_t* entradaDirectorio = &directorio[indexDirectorio];
+  if (entradaDirectorio->attrs & MMU_P == 0)
+  {
+    //Si no existe, creamos la tabla
+    entradaDirectorio->pt = next_free_kernel_page >> 12;
+    entradaDirectorio->attrs = attrs | MMU_P;
+  }
+  
+  //tomamos la direccion de la entrada de directorio como el inicio de una tabla de paginas
+  pt_entry_t* tabla = (pt_entry_t*)(MMU_ENTRY_PADDR(entradaDirectorio->pt));
+  
+  //guardamos la pagina que indica la direccion virtual
+  pt_entry_t* entradaTabla = &tabla[indexTabla];
+  
+  //guardamos la nueva direccion fisica y atributos dentro de la entrada indicada
+  entradaTabla->page = phy >> 12;
+  entradaDirectorio->attrs = attrs | MMU_P;
+
+  tlbflush;
 }
 
 /**
@@ -109,6 +138,29 @@ void mmu_map_page(uint32_t cr3, vaddr_t virt, paddr_t phy, uint32_t attrs) {
  * @return la dirección física de la página desvinculada
  */
 paddr_t mmu_unmap_page(uint32_t cr3, vaddr_t virt) {
+
+  //Tomamos la direccion del cr3 como el inicio de un directorio de paginas
+  pd_entry_t* directorio = (pd_entry_t*)(CR3_TO_PAGE_DIR(cr3));
+  
+  //Desmenuzamos a la direccion virtual en cada uno de sus significados individuales
+  uint32_t indexDirectorio = VIRT_PAGE_DIR(virt);
+  uint32_t indexTabla = VIRT_PAGE_TABLE(virt);
+  uint32_t offset = VIRT_PAGE_OFFSET(virt);
+
+  //Chequeamos si existe la entrada del directorio de paginas que busca la direccion virtual
+  pd_entry_t* entradaDirectorio = &directorio[indexDirectorio];
+  
+  //tomamos la direccion de la entrada de directorio como el inicio de una tabla de paginas
+  pt_entry_t* tabla = (pt_entry_t*)(MMU_ENTRY_PADDR(entradaDirectorio->pt));
+  
+  //guardamos la pagina que indica la direccion virtual
+  pt_entry_t* entradaTabla = &tabla[indexTabla];
+  entradaTabla->attrs = 0;
+  uint32_t addresFisica = MMU_ENTRY_PADDR(entradaTabla->page);
+  
+  tlbflush;
+
+  return addresFisica;
 
 }
 

@@ -19,6 +19,7 @@
 #define SIZE_M 80
 #define COLS   SIZE_M
 
+#define VIDEOLIMIT (ROWS*COLS*2)-1
 /* Indices en la gdt */
 /* -------------------------------------------------------------------------- */
 #define GDT_COUNT         35
