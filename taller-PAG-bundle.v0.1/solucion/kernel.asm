@@ -16,6 +16,7 @@ extern idt_init
 extern pic_reset
 extern pic_enable
 extern mmu_init_kernel_dir
+extern pruebaCopy
 
 
 
@@ -116,10 +117,9 @@ modo_protegido:
     mov cr0, eax  
     call pic_reset
     call pic_enable    
-    
-
-    
     sti
+
+    call pruebaCopy
 
     xor eax, eax
     int 88

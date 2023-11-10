@@ -37,4 +37,7 @@ paddr_t mmu_init_task_dir(paddr_t phy_start);
 
 bool page_fault_handler(vaddr_t virt);
 
+void pruebaCopy(void);
+
+
 #endif //  __MMU_H__

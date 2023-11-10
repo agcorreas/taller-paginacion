@@ -111,8 +111,8 @@ void mmu_map_page(uint32_t cr3, vaddr_t virt, paddr_t phy, uint32_t attrs) {
   uint32_t offset = VIRT_PAGE_OFFSET(virt);
 
   //Chequeamos si existe la entrada del directorio de paginas que busca la direccion virtual
-  pd_entry_t* entradaDirectorio = &directorio[indexDirectorio];
-  if (entradaDirectorio->attrs & MMU_P == 0)
+  pd_entry_t* entradaDirectorio = &(directorio[indexDirectorio]);
+  if ((entradaDirectorio->attrs & MMU_P) == 0)
   {
     //Si no existe, creamos la tabla
     entradaDirectorio->pt = next_free_kernel_page >> 12;
@@ -127,7 +127,7 @@ void mmu_map_page(uint32_t cr3, vaddr_t virt, paddr_t phy, uint32_t attrs) {
   
   //guardamos la nueva direccion fisica y atributos dentro de la entrada indicada
   entradaTabla->page = phy >> 12;
-  entradaDirectorio->attrs = attrs | MMU_P;
+  entradaTabla->attrs = attrs | MMU_P;
 
   tlbflush;
 }
@@ -176,6 +176,29 @@ paddr_t mmu_unmap_page(uint32_t cr3, vaddr_t virt) {
  * la copia y luego desmapea las páginas. Usar la función rcr3 definida en i386.h para obtener el cr3 actual
  */
 void copy_page(paddr_t dst_addr, paddr_t src_addr) {
+
+  uint32_t cr3 = rcr3();
+  //mapear dst_addr a DST_VIRT_PAGE;
+  mmu_map_page(cr3, DST_VIRT_PAGE, dst_addr, MMU_P | MMU_W);
+  
+  //mapear src_addr a SRC_VIRT_PAGE;
+  mmu_map_page(cr3, SRC_VIRT_PAGE, src_addr, MMU_P | MMU_W);
+
+  for (size_t i = 0; i < 64; i++)
+  {
+    uint64_t* dataACopiar = (uint64_t*)(SRC_VIRT_PAGE + 8 * i);  
+    uint64_t* destino = (uint64_t*)(DST_VIRT_PAGE + 8 * i);
+    *destino = *dataACopiar;
+  }
+  
+  mmu_unmap_page(cr3, SRC_VIRT_PAGE);
+  mmu_unmap_page(cr3, DST_VIRT_PAGE);
+
+}
+
+void pruebaCopy(void){
+  kmemset(0x3FA000,1,PAGE_SIZE);
+  copy_page(VIDEO, 0x3FA000);
 }
 
  /**
