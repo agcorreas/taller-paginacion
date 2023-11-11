@@ -17,7 +17,7 @@ extern pic_reset
 extern pic_enable
 extern mmu_init_kernel_dir
 extern pruebaCopy
-
+extern mmu_init_task_dir
 
 
 ; COMPLETAR - Definan correctamente estas constantes cuando las necesiten
@@ -119,7 +119,23 @@ modo_protegido:
     call pic_enable    
     sti
 
-    call pruebaCopy
+    sub esp, 8
+    mov eax, CR3
+    push eax
+    push 0x18000
+    
+    call mmu_init_task_dir
+    mov CR3, eax
+    
+    pop eax
+    pop eax
+    add esp, 8
+    
+
+    mov DWORD [0x7001000], 0xFAFACACA
+    mov DWORD [0x7000004], 0xBEBED0D0
+
+    mov CR3, eax
 
     xor eax, eax
     int 88

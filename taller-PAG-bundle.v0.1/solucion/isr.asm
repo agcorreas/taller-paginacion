@@ -15,6 +15,7 @@ extern pic_finish1
 extern kernel_exception
 
 extern process_scancode
+extern page_fault_handler
 
 ;; Definición de MACROS
 ;; -------------------------------------------------------------------------- ;;
@@ -109,13 +110,37 @@ ISRE 10
 ISRE 11
 ISRE 12
 ISRE 13
-ISRE 14
+;ISRE 14
 ISRNE 15
 ISRNE 16
 ISRE 17
 ISRNE 18
 ISRNE 19
 ISRNE 20
+
+;; Rutina de atención del PAGE FAULT
+;; -------------------------------------------------------------------------- ;;
+global _isr14
+; COMPLETAR: Implementar la rutina
+_isr14:
+    pushad
+    sub esp, 12
+    mov eax, CR2
+    push eax
+    call page_fault_handler
+    add esp, 16
+    test al, al
+    jne interrupcion_resuelta
+    popad
+
+    ISRc 14
+
+interrupcion_resuelta:
+    call pic_finish1
+    popad
+    add esp, 4
+    iret
+
 
 ;; Rutina de atención del RELOJ
 ;; -------------------------------------------------------------------------- ;;
